@@ -447,7 +447,10 @@ void bench_mphf_lookup (phf_t * bphf, Range const& input_range){
     for (int i = 0 ; i < sample.size(); ++i) {
         value.push_back(i);
     }
+	double tickst = get_time_usecs();
     Othello<uint64_t> olt(L, sample, value, true, 200);
+	double tickst2 = get_time_usecs();
+    printf("Othello Construct %d us\n", tickst2 - tickst);
     tick = get_time_usecs();
     stats_accumulator stats2;
 	for (size_t run = 0; run < runs; ++run) {
