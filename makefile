@@ -1,6 +1,6 @@
 # CC=/usr/bin/g++
 CXX ?= g++
-CFLAGS = -O3 -std=c++11 -lpthread
+CFLAGS = -O3 -std=c++11 -lpthread -I../SeqOthello/seqothlib -I../SeqOthello/lib
 EXEC=Bootest example example_custom_hash
 all: $(EXEC)
 
@@ -29,8 +29,11 @@ example_custom_hash: example_custom_hash.cpp
 	$(CXX) -o $@  $^ $(CFLAGS)
 
 
-Bootest:  bootest.cpp
+Bootest:  bootest.cpp util.o
 	$(CXX) -o $@  $^ $(CFLAGS)
+
+util.o:
+	cp ../SeqOthello/build/seqothlib/CMakeFiles/libUtil.dir/util.cpp.o util.o
 
 %.o: %.cpp %.h
 	$(CXX) -o $@ -c $< $(CFLAGS)

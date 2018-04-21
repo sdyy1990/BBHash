@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <thread>
 #include <math.h>
+#include <oltnew.h>
 
 
 
@@ -403,13 +404,16 @@ void bench_mphf_lookup (phf_t * bphf, Range const& input_range){
 
 
 	vector<u_int64_t> sample;
+	set<uint64_t> sampleSet;
 	u_int64_t mphf_value;
 
 	//copy sample in ram
 	for (auto const& key: input_range) {
 		sample.push_back(key);
+        sampleSet.insert(key);
 	}
 
+    printf("Samples %d %d\n", sample.size(), sampleSet.size());
 	printf("bench lookups  sample size %lu \n",sample.size());
 	//bench procedure taken from emphf
 	stats_accumulator stats;
@@ -437,6 +441,32 @@ void bench_mphf_lookup (phf_t * bphf, Range const& input_range){
 	}
 	printf("BBhash bench lookups average %.2f ns +- stddev  %.2f %%   (fingerprint %llu)  \n", 1000.0*stats.mean(),stats.relative_stddev(),dumb);
 
+    int L = 1;
+    while ((1<<L) < sample.size()) L++;
+    vector<int> value;
+    for (int i = 0 ; i < sample.size(); ++i) {
+        value.push_back(i);
+    }
+    Othello<uint64_t> olt(L, sample, value, true, 200);
+    tick = get_time_usecs();
+    stats_accumulator stats2;
+	for (size_t run = 0; run < runs; ++run) {
+		for (size_t ii = 0; ii < sample.size(); ++ii) {
+
+			mphf_value = olt.queryInt(sample[ii]);
+			//do some silly work
+			dumb+= mphf_value;
+
+			if (++lookups == lookups_per_sample) {
+				elapsed = get_time_usecs() - tick;
+				stats2.add(elapsed / (double)lookups);
+				tick = get_time_usecs();
+				lookups = 0;
+			}
+		}
+	}
+	printf("Othello bench lookups average %.2f ns +- stddev  %.2f %%   (fingerprint %llu)  \n", 1000.0*stats2.mean(),stats2.relative_stddev(),dumb);
+    
 }
 
 
