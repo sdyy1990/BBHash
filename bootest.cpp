@@ -398,7 +398,39 @@ int check_mphf_correctness (phf_t * bphf, Range const& input_range){
 		}
 }
 
+void workOthello(vector<uint64_t> sample, int L, int lookups_per_sample) {
+    vector<int> value;
+    for (int i = 0 ; i < sample.size(); ++i) {
+        value.push_back(i && (1<<L) );
+    }
+	double tickst = get_time_usecs();
+    Othello<uint64_t> olt(L, sample, value, true, 200);
+	double tickst2 = get_time_usecs();
+    printf("Othello Construct %lf s\n", (tickst2 - tickst)*1.0e-6);
+    double tick = get_time_usecs();
+    stats_accumulator stats2;
+    uint64_t dumb = 0;
+    int lookups;
+	for (size_t run = 0; run < 10; ++run) {
+		for (size_t ii = 0; ii < sample.size(); ++ii) {
 
+			int mphf_value = olt.queryInt(sample[ii]);
+			//do some silly work
+			dumb+= mphf_value;
+
+			if (++lookups == lookups_per_sample) {
+				double elapsed = get_time_usecs() - tick;
+				stats2.add(elapsed / (double)lookups);
+				tick = get_time_usecs();
+				lookups = 0;
+			}
+		}
+	}
+	printf("Othello bench lookups average %.2f ns +- stddev  %.2f %%   (fingerprint %llu)  \n", 1000.0*stats2.mean(),stats2.relative_stddev(),dumb);
+    printf("Othello memory overhead: %.3f bits/key : range: %d\n", (olt.ma + olt.mb) * L * 1.0 / sample.size(), (1ULL <<L));
+    
+   
+}
 template <typename phf_t,typename Range>
 void bench_mphf_lookup (phf_t * bphf, Range const& input_range){
 
@@ -440,36 +472,14 @@ void bench_mphf_lookup (phf_t * bphf, Range const& input_range){
 		}
 	}
 	printf("BBhash bench lookups average %.2f ns +- stddev  %.2f %%   (fingerprint %llu)  \n", 1000.0*stats.mean(),stats.relative_stddev(),dumb);
-
+    
     int L = 1;
     while ((1<<L) < sample.size()) L++;
-    vector<int> value;
-    for (int i = 0 ; i < sample.size(); ++i) {
-        value.push_back(i);
-    }
-	double tickst = get_time_usecs();
-    Othello<uint64_t> olt(L, sample, value, true, 200);
-	double tickst2 = get_time_usecs();
-    printf("Othello Construct %d us\n", tickst2 - tickst);
-    tick = get_time_usecs();
-    stats_accumulator stats2;
-	for (size_t run = 0; run < runs; ++run) {
-		for (size_t ii = 0; ii < sample.size(); ++ii) {
+    workOthello(sample, L, lookups_per_sample);
+    workOthello(sample, 8, lookups_per_sample);
+    workOthello(sample, 12, lookups_per_sample);
 
-			mphf_value = olt.queryInt(sample[ii]);
-			//do some silly work
-			dumb+= mphf_value;
 
-			if (++lookups == lookups_per_sample) {
-				elapsed = get_time_usecs() - tick;
-				stats2.add(elapsed / (double)lookups);
-				tick = get_time_usecs();
-				lookups = 0;
-			}
-		}
-	}
-	printf("Othello bench lookups average %.2f ns +- stddev  %.2f %%   (fingerprint %llu)  \n", 1000.0*stats2.mean(),stats2.relative_stddev(),dumb);
-    
 }
 
 
